@@ -6,6 +6,12 @@ module "network_dns" {
   source = "../../modules/network-dns"
 }
 
+module "lambda_control" {
+  source       = "../../modules/lambda-control"
+  zone_id       = module.network_dns.zone_id
+  record_name   = "_cmd.${module.network_dns.zone_name}"
+}
+
 resource "random_id" "suffix" {
   byte_length = 3
 }

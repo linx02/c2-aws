@@ -8,6 +8,7 @@ import software.amazon.awssdk.services.lambda.model.InvokeResponse;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 public class SetCommand implements Command {
     public void run(List<String> args) {
@@ -15,7 +16,16 @@ public class SetCommand implements Command {
             throw new InvalidUsageException(getUsage());
         }
 
-        String lambdaName = "c2-control";
+        String ssmPrefix = "/c2";
+        Map<String, String> cfg;
+        try (SsmConfig sc = new SsmConfig()) {
+            cfg = sc.load();
+        }
+
+        String lambdaName = cfg.get("control_lambda");
+        if (lambdaName == null || lambdaName.isBlank()) {
+            throw new IllegalArgumentException("Missing control_lambda in SSM");
+        }
         Region region = Region.of("eu-north-1");
 
         String command = args.getFirst();

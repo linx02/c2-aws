@@ -13,7 +13,6 @@
         <module>agent</module>
         <module>master</module>
         <module>lambda-control</module>
-        <module>lambda-log</module>
     </modules>
 
     <properties>

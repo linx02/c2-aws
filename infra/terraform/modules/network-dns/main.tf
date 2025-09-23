@@ -9,7 +9,7 @@ resource "aws_vpc" "this" {
   })
 }
 
-# Internet Gateway (avstängd som default)
+# Internet Gateway
 resource "aws_internet_gateway" "this" {
   count  = var.create_igw ? 1 : 0
   vpc_id = aws_vpc.this.id
@@ -17,12 +17,12 @@ resource "aws_internet_gateway" "this" {
 }
 
 # Subnet
-resource "aws_subnet" "main" {
+resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.this.id
   cidr_block              = cidrsubnet(var.vpc_cidr, 4, 0)
   map_public_ip_on_launch = var.create_igw
   availability_zone       = var.az
-  tags                    = merge(var.tags, { "Name" = "${var.name}-subnet" })
+  tags                    = merge(var.tags, { "Name" = "${var.name}-public-subnet" })
 }
 
 # Route table
@@ -39,7 +39,7 @@ resource "aws_route" "default_internet" {
 }
 
 resource "aws_route_table_association" "main" {
-  subnet_id      = aws_subnet.main.id
+  subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.main.id
 }
 

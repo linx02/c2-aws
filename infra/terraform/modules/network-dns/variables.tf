@@ -18,7 +18,7 @@ variable "zone_name" {
 
 variable "create_igw" {
   type        = bool
-  default     = false
+  default     = true
   description = "Whether to create an Internet Gateway (and make the subnet public)."
 }
 

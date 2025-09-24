@@ -71,15 +71,11 @@ public class Main {
             System.out.println("Fetched TXT: " + txt);
         }
 
-        int sep = txt.indexOf("::");
-        if (sep <= 0 || sep == txt.length() - 2) return;
+        ParsedCommand parsed = parseTxt(txt);
 
-        String id  = txt.substring(0, sep);
-        String cmd = txt.substring(sep + 2);
+        if (!Singletons.seen().firstTime(parsed.id)) return;
 
-        if (!Singletons.seen().firstTime(id)) return;
-
-        CommandExecutor.Result res = exec.exec(cmd);
+        CommandExecutor.Result res = exec.exec(parsed.cmd);
 
         if ("dev".equals(env)) {
             System.out.println("--- command output ---");
@@ -94,15 +90,15 @@ public class Main {
             # exit: %d
 
             %s
-            """.formatted(Instant.now(), id, cmd, res.exitCode(), res.output());
+            """.formatted(Instant.now(), parsed.id, parsed.cmd, res.exitCode(), res.output());
 
         s3.putObject(
-                PutObjectRequest.builder().bucket(bucket).key(prefix + id + ".txt").build(),
+                PutObjectRequest.builder().bucket(bucket).key(prefix + parsed.id + ".txt").build(),
                 RequestBody.fromBytes(body.getBytes(StandardCharsets.UTF_8))
         );
 
         if ("dev".equals(env)) {
-            System.out.printf("Executed id=%s exit=%d%n", id, res.exitCode());
+            System.out.printf("Executed id=%s exit=%d%n", parsed.id, res.exitCode());
         }
     }
 
@@ -113,5 +109,17 @@ public class Main {
             return SEEN;
         }
     }
+
+    public static ParsedCommand parseTxt(String txt) {
+        int sep = txt.indexOf("::");
+        if (sep <= 0 || sep == txt.length() - 2) {
+            throw new IllegalArgumentException("Invalid TXT record: " + txt);
+        }
+        String id  = txt.substring(0, sep);
+        String cmd = txt.substring(sep + 2);
+        return new ParsedCommand(id, cmd);
+    }
+
+    public record ParsedCommand(String id, String cmd) {}
 
 }

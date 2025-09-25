@@ -87,6 +87,14 @@ resource "aws_iam_policy" "agent_policy" {
         Effect: "Allow",
         Action: ["route53:ListResourceRecordSets","route53:TestDNSAnswer"],
         Resource: "*"
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "xray:PutTraceSegments",
+          "xray:PutTelemetryRecords"
+        ],
+        "Resource": "*"
       }
     ]
   })

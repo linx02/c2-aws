@@ -1,0 +1,33 @@
+version: 0.2
+
+env:
+  shell: bash
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto21
+    commands:
+      - set -e # 1 fel = dö
+      - mvn -v
+  pre_build:
+    commands:
+      # Kör alla tester
+      - mvn -B -e test
+  build:
+    commands:
+      # Bygg endast agent.jar
+      - mvn -B -e -pl agent -am -DskipTests package
+      - chmod +x scripts/*.sh
+      - ls -lah agent/target
+artifacts:
+  files:
+    - agent/target/agent.jar
+    - appspec.yml
+    - scripts/**/*
+  discard-paths: no
+  base-directory: .
+
+cache:
+  paths:
+    - ~/.m2/**/*  # cachea så går nästa snabbare

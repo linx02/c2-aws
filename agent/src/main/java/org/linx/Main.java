@@ -1,9 +1,12 @@
 package org.linx;
 
+import com.amazonaws.xray.entities.Subsegment;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import com.amazonaws.xray.AWSXRay;
+import com.amazonaws.xray.AWSXRayRecorderBuilder;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -14,6 +17,10 @@ public class Main {
 
     private static final String env = "prod";
 
+    static {
+        AWSXRay.setGlobalRecorder(AWSXRayRecorderBuilder.standard().build());
+    }
+
     public static void main(String[] args) throws Exception {
         Map<String,String> cfg;
         try (SsmConfig sc = new SsmConfig()) {
@@ -23,7 +30,6 @@ public class Main {
         String recordName = cfg.get("record_name");
         String bucket     = cfg.get("log_bucket");
         String prefix     = cfg.get("log_prefix");
-        String pollMsStr  = cfg.get("poll_ms");
         long   pollMs     = Long.parseLong(cfg.get("poll_ms"));
 
         if (bucket == null || bucket.isBlank())
@@ -44,8 +50,6 @@ public class Main {
                 .region(Region.of( "eu-north-1"))
                 .build();
 
-        // Spara körda id:n för att undvika dubbletter
-        SeenStore seen = new SeenStore(new File("seen-ids.txt"));
         CommandExecutor exec = new ProcessExecutor();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> System.out.println("Goodbye!")));
@@ -67,38 +71,54 @@ public class Main {
                         CommandExecutor exec, S3Client s3, String bucket, String prefix) throws Exception {
         String txt = resolver.fetch(recordName);
         if (txt == null || txt.isBlank()) return;
-        if ("dev".equals(env)) {
-            System.out.println("Fetched TXT: " + txt);
-        }
 
         ParsedCommand parsed = parseTxt(txt);
+        if (!Singletons.seen().firstTime(parsed.id())) return;
 
-        if (!Singletons.seen().firstTime(parsed.id)) return;
+        AWSXRay.beginSegment("agent"); // Så vi inte skapar en ny var 5:e sekund 24/7
+        try {
+            Subsegment execSeg = AWSXRay.beginSubsegment("exec");
+            try {
+                CommandExecutor.Result res = exec.exec(parsed.cmd());
+                execSeg.putAnnotation("id", parsed.id());
+                execSeg.putAnnotation("exit", res.exitCode());
+                execSeg.putMetadata("cmd", parsed.cmd(), "c2");
+                execSeg.putMetadata("output", res.output(), "c2");
 
-        CommandExecutor.Result res = exec.exec(parsed.cmd);
+                String body = """
+                # time: %s
+                # id:   %s
+                # cmd:  %s
+                # exit: %d
 
-        if ("dev".equals(env)) {
-            System.out.println("--- command output ---");
-            System.out.print(res.output());
-            System.out.println("----------------------");
-        }
+                %s
+                """.formatted(Instant.now(), parsed.id(), parsed.cmd(), res.exitCode(), res.output());
 
-        String body = """
-            # time: %s
-            # id:   %s
-            # cmd:  %s
-            # exit: %d
-
-            %s
-            """.formatted(Instant.now(), parsed.id, parsed.cmd, res.exitCode(), res.output());
-
-        s3.putObject(
-                PutObjectRequest.builder().bucket(bucket).key(prefix + parsed.id + ".txt").build(),
-                RequestBody.fromBytes(body.getBytes(StandardCharsets.UTF_8))
-        );
-
-        if ("dev".equals(env)) {
-            System.out.printf("Executed id=%s exit=%d%n", parsed.id, res.exitCode());
+                Subsegment s3seg = AWSXRay.beginSubsegment("s3-put");
+                try {
+                    s3.putObject(
+                            PutObjectRequest.builder()
+                                    .bucket(bucket)
+                                    .key(prefix + parsed.id() + ".txt")
+                                    .build(),
+                            RequestBody.fromBytes(body.getBytes(StandardCharsets.UTF_8))
+                    );
+                    s3seg.putAnnotation("bucket", bucket);
+                    s3seg.putAnnotation("key", prefix + parsed.id() + ".txt");
+                } catch (Exception e) {
+                    s3seg.addException(e);
+                    throw e;
+                } finally {
+                    AWSXRay.endSubsegment();
+                }
+            } catch (Exception e) {
+                execSeg.addException(e);
+                throw e;
+            } finally {
+                AWSXRay.endSubsegment();
+            }
+        } finally {
+            AWSXRay.endSegment();
         }
     }
 

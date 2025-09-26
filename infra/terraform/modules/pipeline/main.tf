@@ -51,8 +51,11 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
     Statement = [
       {
         Effect   = "Allow",
-        Action   = ["s3:*"],
-        Resource = [aws_s3_bucket.artifacts.arn, "${aws_s3_bucket.artifacts.arn}/*"]
+        Action   = ["s3:GetObject","s3:GetObjectVersion","s3:PutObject","s3:PutObjectAcl","s3:ListBucket"],
+        Resource = [
+          aws_s3_bucket.artifacts.arn,
+          "${aws_s3_bucket.artifacts.arn}/*"
+        ]
       },
       {
         Effect   = "Allow",
@@ -99,17 +102,32 @@ resource "aws_iam_role_policy" "codebuild_policy" {
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
-      { Effect = "Allow", Action = ["logs:*","cloudwatch:*"], Resource = "*" },
-      { Effect = "Allow", Action = ["s3:*"], Resource = "*" },
       {
         Effect = "Allow",
         Action = [
-          "ec2:*",
-          "iam:PassRole",
-          "ssm:GetParameter","ssm:GetParameters","ssm:GetParametersByPath",
-          "route53:ListResourceRecordSets","route53:TestDNSAnswer"
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
         ],
         Resource = "*"
+      },
+
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:PutObject"
+        ],
+        Resource = "${aws_s3_bucket.artifacts.arn}/*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:ListBucket"
+        ],
+        Resource = aws_s3_bucket.artifacts.arn
       }
     ]
   })
@@ -159,27 +177,22 @@ resource "aws_iam_role_policy" "codedeploy_policy" {
       {
         Effect = "Allow",
         Action = [
-          "ec2:Describe*",
-          "autoscaling:Describe*",
-          "tag:GetResources",
-          "elasticloadbalancing:Describe*",
-          "cloudwatch:PutMetricData"
+          "ec2:DescribeInstances",
+          "ec2:DescribeInstanceStatus",
+          "ec2:DescribeTags",
+          "ec2:DescribeRegions"
         ],
         Resource = "*"
       },
+
       {
         Effect = "Allow",
-        Action = [
-          "s3:GetObject",
-          "s3:GetObjectVersion"
-        ],
+        Action = ["s3:GetObject", "s3:GetObjectVersion"],
         Resource = "${aws_s3_bucket.artifacts.arn}/*"
       },
       {
         Effect = "Allow",
-        Action = [
-          "s3:ListBucket"
-        ],
+        Action = ["s3:ListBucket"],
         Resource = aws_s3_bucket.artifacts.arn
       }
     ]

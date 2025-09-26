@@ -21,7 +21,7 @@ resource "aws_iam_role_policy" "policy" {
       {
         Sid      = "Route53ChangeTxt",
         Effect   = "Allow",
-        Action   = ["route53:ChangeResourceRecordSets","route53:GetChange","route53:ListResourceRecordSets"],
+        Action   = ["route53:ChangeResourceRecordSets"],
         Resource = "arn:aws:route53:::hostedzone/${var.zone_id}"
       }
     ]

@@ -23,12 +23,16 @@ module "linux_public" {
   name             = "c2-linux-demo"
   vpc_id           = module.network_dns.vpc_id
   public_subnet_id = module.network_dns.subnet_id
-  ami              = "ami-02ed761ffaf18fcd6"
+  ami              = "ami-00224a8c601732961" # Från packer
   key_name         = "c2-demo-key"
   my_ip_cidr       = "213.113.59.153/32"
   associate_eip    = true
   log_bucket  = module.s3_logs.bucket_name
-  tags             = { Env = "dev", Project = "c2" }
+  tags             = { Env = "dev", Project = "c2", Deploy = "agent" }
+}
+
+module "code_pipeline" {
+  source      = "../../modules/pipeline"
 }
 
 resource "random_id" "suffix" {

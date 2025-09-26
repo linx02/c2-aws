@@ -1,0 +1,36 @@
+{
+  "StartAt": "AggregateLogs",
+  "States": {
+    "AggregateLogs": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "aggregate",
+        "Payload": {
+          "bucket.$": "$.bucket",
+          "prefix.$": "$.prefix",
+          "date.$": "$.date"
+        }
+      },
+      "ResultSelector": {
+        "date.$": "$.Payload.date",
+        "reportText.$": "$.Payload.reportText"
+      },
+      "ResultPath": "$.agg",
+      "Next": "WriteReport"
+    },
+    "WriteReport": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "write_report",
+        "Payload": {
+          "bucket.$": "$.bucket",
+          "date.$": "$.agg.date",
+          "reportText.$": "$.agg.reportText"
+        }
+      },
+      "End": true
+    }
+  }
+}

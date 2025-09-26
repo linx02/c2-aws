@@ -24,6 +24,21 @@ Syftet med detta projekt är att ge en praktisk inblick i hur DNS-baserade C2-ka
 
 ---
 
+## **Vad är ett C2?**
+
+C2 (**Command & Control**) används i säkerhetsvärlden för att styra övertagna system:
+
+- Skicka instruktioner till en infekterad maskin.
+- Ta emot resultat tillbaka.
+
+## **Varför DNS?**
+
+- **Ser ut som vanlig trafik** - DNS används i nästan alla miljöer.
+- **Bypass av brandväggar** - DNS är nästan alltid öppet.
+- **Enkel polling** - Agenter kan hämta TXT-records utan långlivade anslutningar.
+
+---
+
 ## Arkitekturskiss
 ![Arkitekturskiss](docs/diagram.png)  
 

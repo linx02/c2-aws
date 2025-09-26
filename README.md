@@ -98,7 +98,7 @@ Pipe
    CodeBuild kör `mvn test`, packar `agent.jar`.  
    [buildspec.yml](buildspec.yml)
 
-3. **Deploy (CodeDeploy)**  
+3. **Deploy**  
    - [appspec.yml](appspec.yml) beskriver hur `agent.jar` distribueras till EC2.  
    - Scripts (`scripts/stop_service.sh`, `scripts/start_service.sh`, `scripts/set_perms.sh`, `scripts/health_check.sh`) körs i olika hooks.  
    - Deployment group matchar EC2-instanser baserat på taggar.  
@@ -124,9 +124,9 @@ Daglig rapport genereras via ett enkelt arbetsflöde:
 Denna körde jag genom att skapa en ny "execution" i AWS-konsollen med input:
 ```json
 { 
-    bucket: "c2-logs-597c85",
-    prefix: "logs/",
-    date: "2025-09-23"
+    "bucket": "c2-logs-597c85",
+    "prefix": "logs/",
+    "date": "2025-09-23"
 }
 ```
 
